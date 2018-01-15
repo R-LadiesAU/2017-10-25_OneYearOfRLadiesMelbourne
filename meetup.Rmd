@@ -1,0 +1,276 @@
+---
+title: "meetups"
+author: "Anna Quaglieri"
+date: "22/10/2017"
+output: html_document
+---
+
+CACDCE
+84838B
+8A3B8C
+5B505E
+
+```{r setup, include=TRUE,cache=TRUE}
+knitr::opts_chunk$set(echo = TRUE,dev = "pdf")
+```
+
+# Members list
+
+```{r cumulative_per_date_with_label,fig.width=15,fig.height=7,cache=TRUE}
+library(readr)
+library(tidyverse)
+library(ggrepel)
+require("tidyverse")
+devtools::install_github("kalimu/genderizeR")
+library(genderizeR)
+require("purrr")
+require("rvest")
+require("stringr")
+#members <- read_delim("R-Ladies-Melbourne_Member_List_on_10-22-17.txt",  "\t", escape_double = FALSE, trim_ws = TRUE)
+members<- read_csv("R-Ladies-Melbourne_Member_List_on_11-05-17.csv")
+members <- members %>% separate(`Joined Group on`, into =c("Month","Day","Year"),remove=FALSE,sep="/")
+table(members$Year)
+members$Year <- ifelse(members$Year == "16","2016",
+                       ifelse(members$Year == "17","2017",members$Year))
+members$Month <- ifelse(members$Month == "01","1",members$Month)
+members$Month <- ifelse(members$Month == "02","2",members$Month)
+members$Month <- ifelse(members$Month == "03","3",members$Month)
+members$Month <- ifelse(members$Month == "04","4",members$Month)
+members$Month <- ifelse(members$Month == "05","5",members$Month)
+members$Month <- ifelse(members$Month == "06","6",members$Month)
+members$Month <- ifelse(members$Month == "07","7",members$Month)
+members$Month <- ifelse(members$Month == "08","8",members$Month)
+members$Month <- ifelse(members$Month == "09","9",members$Month)
+members$Month <- factor(members$Month,levels=c("1","2","3","4","5","6","7","8","9","10","11","12"))
+
+members$Date_joined <- paste(members$Year,members$Month,members$Day,sep="-")
+members$Date_joined <- as.Date(members$Date_joined, "%Y-%m-%d")
+members <- members[order(members$Date_joined,decreasing = FALSE),]
+
+members_joined <- members %>% group_by(Date_joined) %>% 
+  dplyr::summarise(New_members = length(Name))
+members_joined$cumulative <- cumsum(members_joined$New_members)
+
+# events dates
+
+events <- data.frame(title = c("Random Forest and \n Climate Change","Intro to R","mixOmics",
+                               "Neural Networks","Sport Analytics","Twitter Workshop",
+                               "Git in RStudio","Dashboards with R","Women's Day breakfast",
+                               "Hidden Figures screening","RNotebook and \n Interactive Graphics","Christmas Party",
+                               "Launch Meetup","Analytics Charity Christmas Gala","Intro to R-Shiny"),
+                     date_event = c("2017-10-25","2017-09-24","2017-08-22","2017-07-17",
+                                    "2017-06-15","2017-05-22","2017-05-04","2017-03-30",
+                                    "2017-03-08","2017-03-02","2017-02-20","2016-12-07","2016-10-18",
+                                    "2016-11-24","2017-11-23"),
+                     yax <- c(576,555,540,506,468,441,406,375,360,343,326,229,209,183,680))
+events$date_event <- as.Date(events$date_event,"%Y-%m-%d")
+ggplot(members_joined,aes(x=Date_joined,y=cumulative)) + geom_line(linetype="dotted") + geom_point(colour="grey50")  +
+  geom_vline(xintercept = events$date_event,linetype="dotted",colour="#691d7f") + 
+    geom_label_repel(data=events,aes(x=date_event,y=yax,label=title),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05,show.legend = FALSE,box.padding = 2,point.padding = 0.5,arrow = arrow(length = unit(0.01, 'npc'))) + theme_bw()+
+  labs(x="Event Date",y="Cumulative new members") + scale_x_date(breaks=events$date_event) +  theme(axis.text.x = element_text(angle=45,hjust = 1))+
+  ggtitle("Updated to 5th Nov 2017 (608 members)")
+
+write.csv(members_joined,"members_joined_2017.csv",row.names = FALSE)
+```
+
+
+```{r}
+
+ggplot(members_joined,aes(x=Date_joined,y=cumulative)) + geom_line(colour="grey50") + geom_point(colour="grey50") + 
+  geom_vline(xintercept = events$date_event,linetype="dotted",colour="#691d7f") + 
+    geom_label_repel(data=events,aes(x=date_event,y=yax,label=title),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05,show.legend = FALSE,box.padding = 2,point.padding = 0.5) + theme_bw()+
+  labs(x="Event Date",y="Cumulative new members") + scale_x_date(breaks=events$date_event) +  theme(axis.text.x = element_text(angle=45,hjust = 1))+
+  ggtitle("Updated to 5th Nov 2017 (608 members)")
+
+ggplot(members_joined,aes(x=Date_joined,y=cumulative)) + geom_line(colour="grey50")  + 
+  geom_vline(xintercept = events$date_event,linetype="dotted",colour="#691d7f") + 
+    geom_text(data=events,aes(x=date_event,y=yax,label=title),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05,show.legend = FALSE,box.padding = 2,point.padding = 0.5) + theme_bw()+
+  labs(x="Event Date",y="Cumulative new members") +  theme(axis.text.x = element_text(angle=45,hjust = 1))+
+  ggtitle("Updated to 5th Nov 2017 (608 members)")
+
+pdf("panphlet/cumukative_new_members.pdf",useDingbats = FALSE,width = 12,height = 5)
+ggplot(members_joined,aes(x=Date_joined,y=cumulative)) + geom_line(colour="grey50")  + 
+    geom_text_repel(data=events,aes(x=date_event,y=yax,label=title),colour="#691d7f") + theme_bw()+
+  labs(x="Event Date",y="Cumulative new members") +  theme(axis.text.x = element_text(angle=45,hjust = 1))+
+  ggtitle("Updated to 5th Nov 2017 (608 members)")+ scale_x_date(breaks=events$date_event)
+dev.off()
+```
+
+
+- Cumulative by Month
+
+```{r month_new_members_events,fig.width=13,fig.height=7}
+library(readr)
+library(tidyverse)
+library(ggrepel)
+
+members_joined <- members %>% group_by(Year,Month) %>% 
+  dplyr::summarise(New_members = length(Name)) %>% 
+  unite(Year_Month,Year,Month,sep="-",remove=FALSE)
+
+events <- data.frame(Event = c("Random Forest & Climate Change",
+                               "Introduction to R",
+                               "mixOmics",
+                               "Neural Networks",
+                               "Sport Analytics",
+                               "Twitter Workshop \n GitHub",
+                               "Dashboards with R \n Women's Day breakfast \n Hidden Figures screening",
+                               "Trivia Night-Christmas Party",
+                               "RNotebook & Interactive Graphics",
+                               "Launch Meetup",
+                               "Analytics Charity Christmas Gala \n (With Data Science Meetup)"),
+                     Year_Month = c("2017-10",
+                                    "2017-9",
+                                    "2017-8",
+                                    "2017-7",
+                                    "2017-6",
+                                    "2017-5",
+                                    "2017-3",
+                                   "2016-12",
+                                   "2017-2",
+                                   "2016-10",
+                                    "2016-11"))
+
+events$Year_Month <- factor(events$Year_Month,levels=c("2016-10","2016-11","2016-12","2017-2","2017-3","2017-5","2017-6","2017-7","2017-8","2017-9","2017-10"))
+
+merge_event_members <- merge(members_joined,events,all = TRUE)
+merge_event_members$cumulative <- cumsum(merge_event_members$New_members)
+merge_event_members$Year_Month <- factor(merge_event_members$Year_Month,levels=c("2016-9","2016-10","2016-11","2016-12","2017-2","2017-3","2017-4","2017-5","2017-6","2017-7","2017-8","2017-9","2017-10"))
+
+ggplot(merge_event_members,aes(x=Year_Month,y=cumulative,group=Year_Month)) + geom_line(group = 1,linetype="dotted") + geom_point(colour="#691d7f",size=3)  +
+  geom_label_repel(aes(x=Year_Month,y=cumulative,label=Event),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05,show.legend = FALSE,box.padding = 2,point.padding = 0.5,nudge_x = -1, nudge_y = 2,arrow = arrow(length = unit(0.01, 'npc'))) + theme_bw() +
+  labs(x="Month",y="Cumulative new members")
+```
+
+- Not cumulative
+
+```{r new_members_per_month,fig.width=13,fig.height=7}
+ggplot(merge_event_members,aes(x=Year_Month,y=New_members,group=Year_Month)) + geom_line(group = 1,linetype="dotted") + geom_point(colour="#691d7f",size=3)  +
+  geom_label_repel(aes(x=Year_Month,y=New_members,label=Event),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05,show.legend = FALSE,box.padding = 2,point.padding = 0.5,nudge_x = -1, nudge_y = 2,arrow = arrow(length = unit(0.01, 'npc'))) + theme_bw() +
+  labs(x="Month",y="Cumulative new members")
+```
+
+
+## Members coming at every event
+
+```{r attendes_per_event}
+# events dates
+
+events <- data.frame(title = c("Launch Meetup","Random Forest & Climate Change","Intro to R","mixOmics",
+                               "Neural Networks","Sport Analytics","Twitter Workshop",
+                               "Git in RStudio","Dashboards with R","RNotebook & Interactive Graphics","Christmas Party","Intro to R-Shiny"),
+                     date_event = c("2016-10-18","2017-10-25","2017-09-24","2017-08-22","2017-07-17",
+                                    "2017-06-15","2017-05-22","2017-05-04","2017-03-30",
+                                    "2017-02-20","2016-12-07","2017-11-23"))
+events$date_event <- as.Date(events$date_event,"%Y-%m-%d")
+events$attendees=c(90,48,17,72,81,46,55,51,70,102,46,49)
+
+ggplot(data=events,  aes(x=date_event,y=attendees))  +  geom_point(size=3) + geom_line() + 
+  geom_hline(yintercept = median(events$attendees[-which(events$title == "Intro to R")]),linetype = 2) + 
+  geom_label_repel(data=events,aes(label = title),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05 ,show.legend = FALSE,box.padding = 2,point.padding = 0.5,arrow = arrow(length = unit(0.01, 'npc'))) + theme_bw()+
+  labs(y="Attendes",x="Event Date") + ggtitle(paste0("Median attendance ",median(events$attendees[-which(events$title == "Intro to R")])," shown with dotted line"))
+
+```
+
+# Get gender of meetup participants
+
+```{r include=FALSE,eval=FALSE}
+
+members <- members %>% separate(Name, into = c("FirstName","Surname"),sep=" ",remove=FALSE)
+
+givenNames = data.frame(findGivenNames(members$FirstName, progress = FALSE))
+givenNames$probability <- as.numeric(as.character(givenNames$probability))
+write_csv(givenNames1,file.path("meetup_members_name.csv"))
+
+# match gender
+match_gender <- match(tolower(members$FirstName),givenNames1$name)
+members <- cbind(members,givenNames1[match_gender,c("name","gender","probability")])
+write_csv(members,file.path("meetup_members_gender.csv"))
+
+```
+
+
+### Get meetup http, merge with names from big dataset
+
+
+```{r eval=FALSE}
+members_man <- read_csv("~/RLadiesMelbourne/2017-10-25_OneYearOfRLadiesMelbourne/meetup_members_gender_manual.csv")
+members_man$name[members_man$name == "G\u009aknur"] <- "Göknur"
+events_http <- read_csv("~/RLadiesMelbourne/2017-10-25_OneYearOfRLadiesMelbourne/events_http.csv")
+
+gender_events <- function(url,name_event,members=members_man){
+  
+  event_page <- 
+    url %>% read_html()
+  
+  	member_nodes <- 
+  	    event_page %>%
+  	    html_nodes(".member-name")
+  
+  name_text_with_plusses <-
+  	    member_nodes %>% 
+  	    map(. %>% html_text() %>% str_trim() # str_extract()
+  	        ) %>%
+  	    unlist()
+  data_event <- data.frame(NameLong=name_text_with_plusses)
+  data_event <- data_event %>% separate(NameLong,c("FirstName"),sep=" ",remove=FALSE)
+  data_event$FirstName <- gsub("/s","",data_event$FirstName)
+  merge_event <- merge(data_event,unique(members_man[,c("FirstName","gender")]),all.x=TRUE)
+  merge_event$Event <- name_event
+  return(merge_event)
+}
+
+list_part <- list()
+for(i in 1:nrow(events_http)){
+  list_part[[i]] <- gender_events(url=events_http$http[i],name_event=events_http$title[i],members=members_man)
+}
+df_part <- do.call(rbind,list_part)
+write_csv(df_part,file.path("members_gender_byEvent.csv"))
+
+genders <- gender_events(url="https://www.meetup.com/R-Ladies-Melbourne/events/241263529/",
+              name_event="Neural Networks",members=members_man)
+```
+
+```{r attendes_gender_event,fig.width=10,fig.height=6,cache=TRUE}
+members_gender_byEvent_manual <- read_csv("~/RLadiesMelbourne/2017-10-25_OneYearOfRLadiesMelbourne/members_gender_byEvent_manual.csv")
+members_gender_byEvent_manual <- members_gender_byEvent_manual[members_gender_byEvent_manual$Event != "Intro to R",]
+table(members_gender_byEvent_manual$Event)
+
+summary_by_event <- members_gender_byEvent_manual %>% group_by(Event) %>%
+  summarise(PropLady = sum(gender == "female",na.rm=TRUE)/length(gender[!is.na(gender)]))
+
+colnames(events)[1] <- "Event"
+summary_by_event$Event[summary_by_event$Event == "Notebooks"] <- "RNotebook & Interactive Graphics"
+summary_by_event$Event[summary_by_event$Event == "GitHub"] <- "Git in RStudio"
+merge_event_date <- merge(summary_by_event,events,all.x = TRUE)
+merge_event_date$Event[merge_event_date$Event == "Random Forest & Climate Change"] <- "Random Forest and \n Climate Change"
+merge_event_date$Event[merge_event_date$Event == "RNotebook & Interactive Graphics"] <- "RNotebook and \n Interactive Graphics"
+
+mean(merge_event_date$PropLady,na.rm = TRUE)
+
+
+ggplot(merge_event_date,aes(x=date_event,y=attendees,label=Event)) + geom_point(aes(size=PropLady),colour="#691d7f") + geom_line(group=1,linetype="dotted") + geom_text(colour="#691d7f",hjust=0.5,vjust=-0.9,size=4)+
+  labs(x="Attendes",y="Prop ladies") + theme_bw() + ylim(35,110)+ggtitle("Attendes per event\n(Size proportional to the proportion of ladies")
+
+```
+
+
+

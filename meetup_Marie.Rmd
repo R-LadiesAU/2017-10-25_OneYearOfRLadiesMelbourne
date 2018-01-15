@@ -1,0 +1,79 @@
+---
+title: "meetups"
+author: "Anna Quaglieri"
+date: "22/10/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(readr)
+library(tidyverse)
+library(ggrepel)
+```
+
+# Mmbers list
+
+```{r}
+members <- read_delim("R-Ladies-Melbourne_Member_List_on_10-22-17.txt",  "\t", escape_double = FALSE, trim_ws = TRUE)
+
+members <- members %>% separate(`Joined Group on`, into =c("Month","Day","Year"),remove=FALSE,sep="/")
+table(members$Year)
+members$Year <- ifelse(members$Year == "16","2016",
+                       ifelse(members$Year == "17","2017",members$Year))
+members$Month <- ifelse(members$Month == "01","1",members$Month)
+members$Month <- ifelse(members$Month == "02","2",members$Month)
+members$Month <- ifelse(members$Month == "03","3",members$Month)
+members$Month <- ifelse(members$Month == "04","4",members$Month)
+members$Month <- ifelse(members$Month == "05","5",members$Month)
+members$Month <- ifelse(members$Month == "06","6",members$Month)
+members$Month <- ifelse(members$Month == "07","7",members$Month)
+members$Month <- ifelse(members$Month == "08","8",members$Month)
+members$Month <- ifelse(members$Month == "09","9",members$Month)
+members$Month <- factor(members$Month,levels=c("1","2","3","4","5","6","7","8","9","10","11","12"))
+
+members$Date_joined <- paste(members$Year,members$Month,members$Day,sep="-")
+members$Date_joined <- as.Date(members$Date_joined, "%Y-%m-%d")
+members <- members[order(members$Date_joined,decreasing = FALSE),]
+
+members_joined <- members %>% group_by(Date_joined) %>% 
+  dplyr::summarise(New_members = length(Name))
+members_joined$cumulative <- cumsum(members_joined$New_members)
+
+# events dates
+
+events <- data.frame(title = c("Launch Meetup","Random Forest & Climate Change","Intro to R","mixOmics",
+                               "Neural Network","Sports Analytics","Twitter Workshop",
+                               "GitHub","Dashboards with R","Notebooks","Christmas Party"),
+                               #"Analytics Charity Christmas Gala"),
+                     date_event = c("2016-10-18","2017-10-25","2017-09-24","2017-08-22","2017-07-17",
+                                    "2017-06-15","2017-05-22","2017-05-04","2017-03-30",
+                                    "2017-02-20","2016-12-07"))#,
+                                    #"2016-11-24"))
+events$date_event <- as.Date(events$date_event,"%Y-%m-%d")
+ggplot(members_joined,aes(x=Date_joined,y=cumulative)) + geom_line() + geom_point()  +
+  geom_vline(xintercept = events$date_event,linetype="dotted") 
+
+events$attendees=c(90,48,17,72,81,46,55,51,70,102,46)#,NA)
+#qplot(events$attendees, geom="histogram") 
+ggplot(data=events,  aes(x=date_event,y=attendees))  +  geom_point() + geom_line() + geom_hline(yintercept = 61,linetype = 2) + geom_label_repel(data=events,aes(label = title),fill="#691d7f",
+    fontface = 'bold', color = 'white',
+    segment.color = '#691d7f',
+    label.size = 0.05 ,show.legend = FALSE,nudge_x = -1, nudge_y = 2,arrow = arrow(length = unit(0.01, 'npc'))) + theme_bw()
+ggsave("~/WEHI/R_ladies/BioCAsia/Attendees_per_event_2.png")
+
+```
+
+
+```{r}
+members_joined <- members %>% group_by(Year,Month) %>% 
+  dplyr::summarise(New_members = length(Name))
+
+ggplot(members_joined,aes(x=Month,y=New_members,group=Year,colour=Year)) + geom_line() + geom_point()
+members_joined$cumulative <- cumsum(members_joined$New_members)
+members_joined$year_month <- paste(members_joined$Year,members_joined$Month,sep="_")
+members_joined$year_month <- factor(members_joined$year_month,levels=c("2016_9","2016_10","2016_11","2016_12","2017_1", "2017_2",  "2017_3","2017_4","2017_5","2017_6","2017_7","2017_8","2017_9","2017_10"))
+ggplot(members_joined,aes(x=year_month,y=cumulative,group=year_month,colour=Year)) + geom_line() + geom_point()
+```
+

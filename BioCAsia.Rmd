@@ -1,0 +1,116 @@
+---
+title: "R-Ladies Melbourne - BioCAsia"
+author: "Anna Quaglieri"
+date: "15th May 2017"
+output:
+  github_document:
+    toc: yes
+    toc_depth: 3
+  html_document:
+    toc: yes
+    toc_depth: 3
+linkcolor: magenta
+urlcolor: magenta
+---
+
+```{r}
+library(twitteR)
+library(tidyverse)
+library(RCurl)
+library(ROAuth)
+library(RJSONIO)
+library(devtools)
+
+
+doInstall <- TRUE  # Change to FALSE if you don't want packages installed.
+toInstall <- c("ROAuth", "igraph", "ggplot2", "wordcloud", "devtools", "tm",
+    "R2WinBUGS", "rmongodb", "scales")
+if(doInstall){
+    install.packages(toInstall, repos = "http://cran.r-project.org")
+    library(devtools)
+    # R packages to get twitter and Facebook data
+    install_github("streamR", "pablobarbera", subdir="streamR")
+    install_github("Rfacebook", "pablobarbera", subdir="Rfacebook")
+    # smapp R package
+    install_github("smappR", "SMAPPNYU")
+}
+
+```
+
+
+```{r eval = FALSE}
+api_key<-'Tx6nu4td9a1L4Cy3WLYgtoxb9'
+api_secret<- "VHr9jJIigl0Uvf55vf7K79uqwfiWKT5jJQJNPjstXXcj3wecne"
+token <- "3108157034-Knm58WMZvymPlAAC4jhxTm2keWVHDx7XN9zCs2a"
+token_secret <- "YWHNeceXflljBNjUCW99hsrY1OPV8e7euWIFVTsrmjTmP"
+
+twitteR::setup_twitter_oauth(api_key, api_secret, token, token_secret)
+```
+
+
+# Dowload tweets
+
+```{r}
+twittes_rladiesAU <- twitteR::searchTwitter("@RLadiesAU", n = 10000, lang= "en", since= "2016-10-01")
+df <- twitteR::twListToDF(twittes_rladiesAU)
+
+
+getUser_wrapper <- function(name_block){
+  user_infos <- twitteR::lookupUsers(name_block, includeNA = FALSE)
+  user_infosToDF <- twitteR::twListToDF(user_infos)
+  return(user_infosToDF)
+}
+
+users <- getUser_wrapper(df$screenName)
+```
+
+## Text cleaning
+
+```{r}
+library(tm)
+## Create a world clous from @atlsexyslim tweets
+# Extract tweets 
+some_txt <- df$text
+some_txt <- iconv(some_txt, 'UTF-8', 'latin1', 'byte')
+# Clean text
+# remove punctuation
+some_txt <- gsub("[[:punct:]]", "", some_txt)
+# remove numbers
+some_txt <- gsub("[[:digit:]]", "", some_txt)
+# remove html links
+some_txt <- gsub("http\\w+", "", some_txt)
+# remove unnecessary spaces
+some_txt <- gsub("[ \t]{2,}", "", some_txt)
+some_txt <- gsub("^\\s+|\\s+$", "", some_txt)
+some_txt <- gsub("\n", " ", some_txt)
+
+# build a corpus, and specify the source to be character vectors
+myCorpus <- Corpus(VectorSource(some_txt))
+# convert to lower case
+myCorpus <- tm_map(myCorpus, content_transformer(tolower))
+# remove URLs
+removeURL <- function(x) gsub("http[^[:space:]]*", "", x)
+myCorpus <- tm_map(myCorpus, content_transformer(removeURL))
+# remove anything other than English letters or space
+removeNumPunct <- function(x) gsub("[^[:alpha:][:space:]]*", "", x)
+myCorpus <- tm_map(myCorpus, content_transformer(removeNumPunct))
+# remove stopwords
+myStopwords <- c(setdiff(stopwords('english'), c("r", "big")),
+"use", "see", "used", "via", "amp")
+myCorpus <- tm_map(myCorpus, removeWords, myStopwords)
+# remove extra whitespace
+myCorpus <- tm_map(myCorpus, stripWhitespace)
+# keep a copy for stem completion later
+myCorpusCopy <- myCorpus
+```
+
+
+# twitter timeline
+
+```{r}
+tweets <- userTimeline("RLadiesAU", n = 3200)
+df_tweets <- twitteR::twListToDF(tweets)
+(n.tweet <- length(tweets))
+writeLines(strwrap(df_tweets$text[10], 60))
+```
+

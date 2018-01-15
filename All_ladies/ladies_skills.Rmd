@@ -1,0 +1,41 @@
+---
+title: "ladies"
+author: "Anna Quaglieri"
+date: "23/10/2017"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+library(readr)
+ladies_fields <- read_csv("./All_ladies/ladies_fields.csv")
+
+skills <- ladies_fields$fields
+skills <- gsub(","," ",skills)
+skills <- tolower(skills)
+skills <- skills[!is.na(skills)]
+skills <- gsub(")","",skills)
+
+library(tm)
+library(RColorBrewer)
+# Create objects for the worldcloud
+corpus <- tm::Corpus(tm::VectorSource(skills))
+
+# Create termdocoumentmatrix
+tdm <- tm::TermDocumentMatrix(corpus,
+                    control = list(removePunctuation = TRUE,
+        stopwords = c("machine", "learning", tm::stopwords("english")),
+        removeNumbers = TRUE, tolower = TRUE))   
+tdm
+
+# define tdm as matrix
+dm <- as.matrix(tdm)
+# get word counts in decreasing order
+word_freqs <- sort(rowSums(dm), decreasing=TRUE) 
+# create a data frame with words and their frequencies
+dm <- data.frame(word = names(word_freqs), freq = word_freqs)
+
+knitr::kable(head(dm))
+# Plot the word cloud
+wordcloud::wordcloud(dm$word, dm$freq, min.freq=1,random.order=FALSE, max.words = 100, colors=brewer.pal(8, "Dark2"))
+```
+
